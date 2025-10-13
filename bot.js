@@ -232,6 +232,8 @@ async function handleProfessions(interaction) {
 
   let professionsList = "";
 
+let professionsList = "";
+
 for (const prof of professions.sort()) {
   const profRole = guild.roles.cache.find(r => r.name.toLowerCase() === prof.toLowerCase());
   if (!profRole) continue;
@@ -240,7 +242,7 @@ for (const prof of professions.sort()) {
   if (members.size === 0) continue;
 
   const emoji = getEmojiByName(guild, prof.toLowerCase()) || "•";
-  professionsList += `${emoji} **${prof}** - ${members.size}\n`;
+  professionsList += `${emoji} ${prof} - ${members.size}\n`;
 }
 
 if (professionsList === "") {
@@ -366,6 +368,7 @@ client.once("clientReady", async () => {
 client.login(TOKEN)
   .then(() => console.log("✅ Опит за свързване с Discord..."))
   .catch(err => console.error("❌ Грешка при логване в Discord:", err));
+
 
 
 
