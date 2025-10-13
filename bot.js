@@ -3,7 +3,7 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
 });
 
-onst TOKEN = process.env.TOKEN;       // Discord токен на бота
+const TOKEN = process.env.TOKEN;       // Discord токен на бота
 const CLIENT_ID = process.env.CLIENT_ID; // Application ID на бота
 const GUILD_ID = process.env.GUILD_ID; // ID на вашия сървър
 
@@ -94,4 +94,5 @@ client.once("ready", () => {
 
 
 client.login(TOKEN);
+
 
