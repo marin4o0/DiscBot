@@ -356,3 +356,6 @@ client.once("ready", async () => {
   // Промяна на статуса на всеки 5 минути
   setInterval(setNextStatus, 300000);
 });
+client.login(TOKEN)
+  .then(() => console.log("✅ Опит за свързване с Discord..."))
+  .catch(err => console.error("❌ Грешка при логване в Discord:", err));
