@@ -219,8 +219,8 @@ async function handleProfessions(interaction) {
     embed.color = profRole.color || embed.color;
 
     const members = profRole.members;
+    const emoji = getEmojiByName(guild, selectedProfession.toLowerCase()) || "•";
 
-    const emoji = getEmojiByName(guild, selectedProfession.toLowerCase());
     embed.fields.push({
       name: `${emoji} ${selectedProfession}`,
       value: `Брой: ${members.size}`,
@@ -230,33 +230,28 @@ async function handleProfessions(interaction) {
     return interaction.reply({ embeds: [embed] });
   }
 
+  // Списък за всички професии (без повторно деклариране)
   let professionsList = "";
 
-let professionsList = "";
+  for (const prof of professions.sort()) {
+    const profRole = guild.roles.cache.find(r => r.name.toLowerCase() === prof.toLowerCase());
+    if (!profRole) continue;
 
-for (const prof of professions.sort()) {
-  const profRole = guild.roles.cache.find(r => r.name.toLowerCase() === prof.toLowerCase());
-  if (!profRole) continue;
+    const members = profRole.members;
+    if (members.size === 0) continue;
 
-  const members = profRole.members;
-  if (members.size === 0) continue;
+    const emoji = getEmojiByName(guild, prof.toLowerCase()) || "•";
+    professionsList += `${emoji} ${prof} - ${members.size}\n`;
+  }
 
-  const emoji = getEmojiByName(guild, prof.toLowerCase()) || "•";
-  professionsList += `${emoji} ${prof} - ${members.size}\n`;
-}
-
-if (professionsList === "") {
-  embed.description = "Няма намерени членове с избрани професии.";
-} else {
-  embed.fields.push({
-    name: "Професии",
-    value: professionsList,
-    inline: false
-  });
-}
-
-  if (embed.fields.length === 0) {
+  if (professionsList === "") {
     embed.description = "Няма намерени членове с избрани професии.";
+  } else {
+    embed.fields.push({
+      name: "Професии",
+      value: professionsList,
+      inline: false
+    });
   }
 
   return interaction.reply({ embeds: [embed] });
@@ -368,6 +363,7 @@ client.once("clientReady", async () => {
 client.login(TOKEN)
   .then(() => console.log("✅ Опит за свързване с Discord..."))
   .catch(err => console.error("❌ Грешка при логване в Discord:", err));
+
 
 
 
