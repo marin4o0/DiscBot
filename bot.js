@@ -3,9 +3,9 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
 });
 
-const CLIENT_ID = "";
-const GUILD_ID = ""; // сложи ID на сървъра
-const TOKEN = "";
+onst TOKEN = process.env.TOKEN;       // Discord токен на бота
+const CLIENT_ID = process.env.CLIENT_ID; // Application ID на бота
+const GUILD_ID = process.env.GUILD_ID; // ID на вашия сървър
 
 const wowClasses = [
   "Druid","Hunter","Mage","Paladin","Priest","Rogue","Shaman","Warlock","Warrior"
@@ -94,3 +94,4 @@ client.once("ready", () => {
 
 
 client.login(TOKEN);
+
