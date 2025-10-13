@@ -301,7 +301,7 @@ client.on("interactionCreate", async interaction => {
   }
 });
 
-client.once("ready", async () => {
+client.once("clientReady", async () => {
   console.log(`✅ Логнат като ${client.user.tag}`);
 
   const guild = await client.guilds.fetch(GUILD_ID);
@@ -359,3 +359,4 @@ client.once("ready", async () => {
 client.login(TOKEN)
   .then(() => console.log("✅ Опит за свързване с Discord..."))
   .catch(err => console.error("❌ Грешка при логване в Discord:", err));
+
