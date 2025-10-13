@@ -3,9 +3,9 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
 });
 
-const CLIENT_ID = "1427092918178676878";
-const GUILD_ID = "1424701361672552529"; // сложи ID на сървъра
-const TOKEN = "MTQyNzA5MjkxODE3ODY3Njg3OA.GGPl01.g8w1c8fd1eqKajJOVtzsI6ytaf6_5igz6e8roY";
+const CLIENT_ID = "";
+const GUILD_ID = ""; // сложи ID на сървъра
+const TOKEN = "";
 
 const wowClasses = [
   "Druid","Hunter","Mage","Paladin","Priest","Rogue","Shaman","Warlock","Warrior"
@@ -91,5 +91,6 @@ client.on("interactionCreate", async interaction => {
 client.once("ready", () => {
   console.log(`✅ Логнат като ${client.user.tag}`);
 });
+
 
 client.login(TOKEN);
