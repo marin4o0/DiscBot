@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require("discord.js");
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, InteractionResponseFlags } = require("discord.js");
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
 });
@@ -29,38 +29,6 @@ const professions = [
 function getEmojiByName(guild, name) {
   const emoji = guild.emojis.cache.find(e => e.name === name.toLowerCase());
   return emoji ? emoji.toString() : "•";
-}
-
-// Унифициран embed
-function createEmbed(title, color = 0x0099ff) {
-  return {
-    color,
-    title,
-    description: "",
-    fields: [],
-    timestamp: new Date(),
-    footer: { text: "WoW Discord Bot" }
-  };
-}
-
-// Унифицирано добавяне на списък
-function addListToEmbed(embed, name, items) {
-  if (!items || items.length === 0) {
-    embed.description = "Няма намерени членове по зададените критерии.";
-    return;
-  }
-
-  let listText = "";
-  for (const item of items) {
-    const { emoji, label, count } = item;
-    listText += `${emoji} ${label} - ${count}\n`;
-  }
-
-  embed.fields.push({
-    name,
-    value: listText,
-    inline: false
-  });
 }
 
 // Команди
@@ -116,7 +84,6 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
   }
 })();
 
-// /roleinfo
 async function handleRoleInfo(interaction) {
   const guild = await client.guilds.fetch(GUILD_ID);
   await guild.members.fetch();
@@ -124,15 +91,23 @@ async function handleRoleInfo(interaction) {
 
   const selectedRole = interaction.options.getString("role");
   const selectedClass = interaction.options.getString("class");
-  const embed = createEmbed("Информация за роли и класове");
+
+  const embed = {
+    color: 0x0099ff,
+    title: "Информация за роли и класове",
+    description: "",
+    fields: [],
+    timestamp: new Date(),
+    footer: { text: "WoW Discord Bot" }
+  };
 
   if (selectedClass) {
     const classRole = guild.roles.cache.find(r => r.name.toLowerCase() === selectedClass.toLowerCase());
     if (!classRole) {
       embed.description = "Не е намерен такъв клас.";
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.reply({ embeds: [embed], flags: InteractionResponseFlags.Ephemeral });
     }
-    embed.color = classRole.color || embed.color;
+    embed.color = classRole.color || 0x0099ff;
 
     for (const cat of categories) {
       if (!validClasses[cat].includes(selectedClass)) continue;
@@ -143,15 +118,17 @@ async function handleRoleInfo(interaction) {
 
       const altRole = guild.roles.cache.find(r => r.name.toLowerCase() === `${selectedClass.toLowerCase()}-alt`);
       const members = classRole.members.filter(m =>
-        m.roles.cache.has(catRole.id) && (!altRole || !m.roles.cache.has(altRole.id))
+        m.roles.cache.has(catRole.id) &&
+        (!altRole || !m.roles.cache.has(altRole.id))
       );
 
       if (members.size > 0) {
-        addListToEmbed(embed, `${selectedClass} (${cat})`, [{
-          emoji: getEmojiByName(guild, selectedClass),
-          label: selectedClass,
-          count: members.size
-        }]);
+        const emoji = getEmojiByName(guild, selectedClass);
+        embed.fields.push({
+          name: `${emoji} ${selectedClass} (${cat})`,
+          value: `Брой: ${members.size}`,
+          inline: false
+        });
       }
     }
 
@@ -161,11 +138,12 @@ async function handleRoleInfo(interaction) {
     return interaction.reply({ embeds: [embed] });
   }
 
-  // Филтър по роля или всички категории
+  // Няма филтър по клас
   const categoriesToShow = selectedRole ? [selectedRole] : categories;
 
   for (const category of categoriesToShow) {
-    let items = [];
+    let totalCount = 0;
+    let categoryValue = "";
 
     for (const cls of wowClasses.sort()) {
       if (!validClasses[category].includes(cls)) continue;
@@ -175,25 +153,28 @@ async function handleRoleInfo(interaction) {
       if (!classRole || !categoryRole) continue;
 
       const altRole = guild.roles.cache.find(r => r.name.toLowerCase() === `${cls.toLowerCase()}-alt`);
+
       const members = classRole.members.filter(m =>
-        m.roles.cache.has(categoryRole.id) && (!altRole || !m.roles.cache.has(altRole.id))
+        m.roles.cache.has(categoryRole.id) &&
+        (!altRole || !m.roles.cache.has(altRole.id))
       );
 
       if (members.size > 0) {
-        items.push({
-          emoji: getEmojiByName(guild, cls),
-          label: cls,
-          count: members.size
-        });
+        const emoji = getEmojiByName(guild, cls.toLowerCase());
+        categoryValue += `${emoji} ${cls} - ${members.size}\n`;
+        totalCount += members.size;
       }
     }
 
-    if (items.length > 0) {
-      const totalCount = items.reduce((a, i) => a + i.count, 0);
+    if (totalCount > 0) {
       const categoryRole = guild.roles.cache.find(r => r.name.toLowerCase() === category.toLowerCase());
       embed.color = categoryRole?.color || embed.color;
 
-      addListToEmbed(embed, `${category} (Общо: ${totalCount})`, items);
+      embed.fields.push({
+        name: `${category} (Общо: ${totalCount})`,
+        value: categoryValue,
+        inline: false
+      });
     }
   }
 
@@ -204,61 +185,105 @@ async function handleRoleInfo(interaction) {
   return interaction.reply({ embeds: [embed] });
 }
 
-// /professions
 async function handleProfessions(interaction) {
   const guild = await client.guilds.fetch(GUILD_ID);
   await guild.members.fetch();
   await guild.emojis.fetch();
 
   const selectedProfession = interaction.options.getString("profession");
-  const embed = createEmbed("Информация за професии");
 
-  const professionsToShow = selectedProfession ? [selectedProfession] : professions;
-  let items = [];
+  const embed = {
+    color: 0x0099ff,
+    title: "Информация за професии",
+    description: "",
+    fields: [],
+    timestamp: new Date(),
+    footer: { text: "WoW Discord Bot" }
+  };
 
-  for (const prof of professionsToShow.sort()) {
+  if (selectedProfession) {
+    const profRole = guild.roles.cache.find(r => r.name.toLowerCase() === selectedProfession.toLowerCase());
+    if (!profRole) {
+      embed.description = "Не е намерена такава професия.";
+      return interaction.reply({ embeds: [embed], flags: InteractionResponseFlags.Ephemeral });
+    }
+
+    embed.color = profRole.color || embed.color;
+
+    const members = profRole.members;
+    const emoji = getEmojiByName(guild, selectedProfession.toLowerCase());
+
+    embed.fields.push({
+      name: `${emoji} ${selectedProfession}`,
+      value: `Брой: ${members.size}`,
+      inline: false
+    });
+
+    return interaction.reply({ embeds: [embed] });
+  }
+
+  // Списък за всички професии
+  let professionsList = "";
+  for (const prof of professions.sort()) {
     const profRole = guild.roles.cache.find(r => r.name.toLowerCase() === prof.toLowerCase());
     if (!profRole) continue;
 
     const members = profRole.members;
     if (members.size === 0) continue;
 
-    items.push({
-      emoji: getEmojiByName(guild, prof),
-      label: prof,
-      count: members.size
+    const emoji = getEmojiByName(guild, prof.toLowerCase());
+    professionsList += `${emoji} ${prof} - ${members.size}\n`;
+  }
+
+  if (professionsList === "") {
+    embed.description = "Няма намерени членове с избрани професии.";
+  } else {
+    embed.fields.push({
+      name: "Професии",
+      value: professionsList,
+      inline: false
     });
   }
 
-  addListToEmbed(embed, "Професии", items);
   return interaction.reply({ embeds: [embed] });
 }
 
-// /help
 async function handleHelp(interaction) {
-  const embed = createEmbed("Помощ за командите на WoW Discord бота", 0x00ff00);
-  embed.fields.push(
-    {
-      name: "/roleinfo",
-      value: "Показва WoW роли и класове с брой членове.\n- Филтър по роля: DPS, Tank, Healer.\n- Филтър по клас: Warrior, Mage и др.",
-      inline: false
-    },
-    {
-      name: "/professions",
-      value: "Показва професии и брой членове.\n- Филтър по професия: Alchemy, Woodcutting и др.",
-      inline: false
-    },
-    {
-      name: "/help",
-      value: "Показва тази помощ и информация за командите.",
-      inline: false
-    }
-  );
+  const embed = {
+    color: 0x00ff00,
+    title: "Помощ за командите на WoW Discord бота",
+    description: "Тук можеш да видиш как се използват командите на бота:",
+    fields: [
+      {
+        name: "/roleinfo",
+        value:
+          "Показва WoW роли и класове с брой членове.\n" +
+          "- Можеш да филтрираш по роля: DPS, Tank, Healer.\n" +
+          "- Можеш да филтрираш по клас (напр. Warrior, Mage).\n" +
+          "Пример: `/roleinfo role:DPS` или `/roleinfo class:Warrior`",
+        inline: false,
+      },
+      {
+        name: "/professions",
+        value:
+          "Показва професии и брой членове.\n" +
+          "- Можеш да филтрираш по професия (напр. Alchemy, Woodcutting).\n" +
+          "Пример: `/professions profession:Alchemy`",
+        inline: false,
+      },
+      {
+        name: "/help",
+        value: "Показва тази помощ и информация за командите.",
+        inline: false,
+      },
+    ],
+    timestamp: new Date(),
+    footer: { text: "WoW Discord Bot" },
+  };
 
-  await interaction.reply({ embeds: [embed], ephemeral: true });
+  return interaction.reply({ embeds: [embed], flags: InteractionResponseFlags.Ephemeral });
 }
 
-// Слушатели
 client.on("interactionCreate", async interaction => {
   if (!interaction.isCommand()) return;
 
@@ -271,7 +296,6 @@ client.on("interactionCreate", async interaction => {
   }
 });
 
-// Статуси
 client.once("clientReady", async () => {
   console.log(`✅ Логнат като ${client.user.tag}`);
 
@@ -295,7 +319,9 @@ client.once("clientReady", async () => {
       const role = guild.roles.cache.find(r => r.name.toLowerCase() === category.toLowerCase());
       if (!role) continue;
 
-      const members = role.members.filter(m => !m.roles.cache.some(r => r.name.toLowerCase().endsWith("-alt")));
+      const members = role.members.filter(m =>
+        !m.roles.cache.some(r => r.name.toLowerCase().endsWith("-alt"))
+      );
       roleCounts[category] = members.size;
     }
 
@@ -304,6 +330,7 @@ client.once("clientReady", async () => {
 
   async function setNextStatus() {
     let statusText;
+
     if (index % 4 === 3) {
       statusText = await updateDynamicStatus();
     } else {
