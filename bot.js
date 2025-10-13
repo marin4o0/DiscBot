@@ -230,21 +230,28 @@ async function handleProfessions(interaction) {
     return interaction.reply({ embeds: [embed] });
   }
 
-  for (const prof of professions.sort()) {
-    const profRole = guild.roles.cache.find(r => r.name.toLowerCase() === prof.toLowerCase());
-    if (!profRole) continue;
+  let allProfessionsText = "";
 
-    const members = profRole.members;
-    if (members.size === 0) continue;
+for (const prof of professions.sort()) {
+  const profRole = guild.roles.cache.find(r => r.name.toLowerCase() === prof.toLowerCase());
+  if (!profRole) continue;
 
-    const emoji = getEmojiByName(guild, prof.toLowerCase());
+  const members = profRole.members;
+  if (members.size === 0) continue;
 
-    embed.fields.push({
-      name: `${emoji} ${prof}`,
-      value: `Брой: ${members.size}`,
-      inline: false
-    });
-  }
+  const emoji = getEmojiByName(guild, prof.toLowerCase());
+  allProfessionsText += `${emoji} **${prof}** – ${members.size}\n`;
+}
+
+if (allProfessionsText.length === 0) {
+  embed.description = "Няма намерени членове с избрани професии.";
+} else {
+  embed.fields.push({
+    name: "Професии",
+    value: allProfessionsText,
+    inline: false
+  });
+}
 
   if (embed.fields.length === 0) {
     embed.description = "Няма намерени членове с избрани професии.";
@@ -359,4 +366,5 @@ client.once("clientReady", async () => {
 client.login(TOKEN)
   .then(() => console.log("✅ Опит за свързване с Discord..."))
   .catch(err => console.error("❌ Грешка при логване в Discord:", err));
+
 
