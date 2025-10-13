@@ -88,11 +88,12 @@ client.on("interactionCreate", async interaction => {
 });
 
 // ---------------- Логин ----------------
-client.once("ready", () => {
+client.once("clientReady", () => {
   console.log(`✅ Логнат като ${client.user.tag}`);
 });
 
 
 client.login(TOKEN);
+
 
 
