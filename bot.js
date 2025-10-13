@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, InteractionResponseFlags } = require("discord.js");
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require("discord.js");
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
 });
@@ -84,6 +84,8 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
   }
 })();
 
+// ------------------------- HANDLERS -------------------------
+
 async function handleRoleInfo(interaction) {
   const guild = await client.guilds.fetch(GUILD_ID);
   await guild.members.fetch();
@@ -105,7 +107,7 @@ async function handleRoleInfo(interaction) {
     const classRole = guild.roles.cache.find(r => r.name.toLowerCase() === selectedClass.toLowerCase());
     if (!classRole) {
       embed.description = "Не е намерен такъв клас.";
-      return interaction.reply({ embeds: [embed], flags: InteractionResponseFlags.Ephemeral });
+      return interaction.reply({ embeds: [embed], flags: 1 << 6 });
     }
     embed.color = classRole.color || 0x0099ff;
 
@@ -135,10 +137,9 @@ async function handleRoleInfo(interaction) {
     if (embed.fields.length === 0) {
       embed.description = "Няма членове, които отговарят на зададените критерии.";
     }
-    return interaction.reply({ embeds: [embed] });
+    return interaction.reply({ embeds: [embed], flags: 1 << 6 });
   }
 
-  // Няма филтър по клас
   const categoriesToShow = selectedRole ? [selectedRole] : categories;
 
   for (const category of categoriesToShow) {
@@ -182,7 +183,7 @@ async function handleRoleInfo(interaction) {
     embed.description = "Няма намерени членове по зададените критерии.";
   }
 
-  return interaction.reply({ embeds: [embed] });
+  return interaction.reply({ embeds: [embed], flags: 1 << 6 });
 }
 
 async function handleProfessions(interaction) {
@@ -205,13 +206,13 @@ async function handleProfessions(interaction) {
     const profRole = guild.roles.cache.find(r => r.name.toLowerCase() === selectedProfession.toLowerCase());
     if (!profRole) {
       embed.description = "Не е намерена такава професия.";
-      return interaction.reply({ embeds: [embed], flags: InteractionResponseFlags.Ephemeral });
+      return interaction.reply({ embeds: [embed], flags: 1 << 6 });
     }
 
     embed.color = profRole.color || embed.color;
 
     const members = profRole.members;
-    const emoji = getEmojiByName(guild, selectedProfession.toLowerCase());
+    const emoji = getEmojiByName(guild, selectedProfession.toLowerCase()) || "•";
 
     embed.fields.push({
       name: `${emoji} ${selectedProfession}`,
@@ -219,11 +220,11 @@ async function handleProfessions(interaction) {
       inline: false
     });
 
-    return interaction.reply({ embeds: [embed] });
+    return interaction.reply({ embeds: [embed], flags: 1 << 6 });
   }
 
-  // Списък за всички професии
   let professionsList = "";
+
   for (const prof of professions.sort()) {
     const profRole = guild.roles.cache.find(r => r.name.toLowerCase() === prof.toLowerCase());
     if (!profRole) continue;
@@ -231,7 +232,7 @@ async function handleProfessions(interaction) {
     const members = profRole.members;
     if (members.size === 0) continue;
 
-    const emoji = getEmojiByName(guild, prof.toLowerCase());
+    const emoji = getEmojiByName(guild, prof.toLowerCase()) || "•";
     professionsList += `${emoji} ${prof} - ${members.size}\n`;
   }
 
@@ -245,7 +246,7 @@ async function handleProfessions(interaction) {
     });
   }
 
-  return interaction.reply({ embeds: [embed] });
+  return interaction.reply({ embeds: [embed], flags: 1 << 6 });
 }
 
 async function handleHelp(interaction) {
@@ -281,8 +282,10 @@ async function handleHelp(interaction) {
     footer: { text: "WoW Discord Bot" },
   };
 
-  return interaction.reply({ embeds: [embed], flags: InteractionResponseFlags.Ephemeral });
+  await interaction.reply({ embeds: [embed], flags: 1 << 6 });
 }
+
+// ------------------------- INTERACTION LISTENER -------------------------
 
 client.on("interactionCreate", async interaction => {
   if (!interaction.isCommand()) return;
@@ -295,6 +298,8 @@ client.on("interactionCreate", async interaction => {
     await handleHelp(interaction);
   }
 });
+
+// ------------------------- READY EVENT & STATUS -------------------------
 
 client.once("clientReady", async () => {
   console.log(`✅ Логнат като ${client.user.tag}`);
@@ -348,6 +353,8 @@ client.once("clientReady", async () => {
   await setNextStatus();
   setInterval(setNextStatus, 300000);
 });
+
+// ------------------------- LOGIN -------------------------
 
 client.login(TOKEN)
   .then(() => console.log("✅ Опит за свързване с Discord..."))
