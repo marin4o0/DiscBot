@@ -136,26 +136,20 @@ const commands = [
     .addStringOption(opt => opt.setName("name").setDescription("Име на рейда").setRequired(true))
     .addStringOption(opt => opt.setName("datetime").setDescription("Дата и час (напр. 26.10.2025 20:00)").setRequired(true))
     .addStringOption(opt => opt.setName("image").setDescription("Линк към картинка за ембед (по избор)").setRequired(false))
-    .addIntegerOption(opt => opt.setName("min").setDescription("Минимален брой участници за авто-условие (10)").setRequired(false))
+    .addIntegerOption(opt => opt.setName("min").setDescription("Минимален брой участници (10)").setRequired(false))
     .addIntegerOption(opt => opt.setName("max").setDescription("Максимален брой участници (10-25)").setRequired(false))
     .addIntegerOption(opt => opt.setName("tankmax").setDescription("Максимум танкове").setRequired(false))
     .addIntegerOption(opt => opt.setName("healmax").setDescription("Максимум хилъри").setRequired(false)),
-  new SlashCommandBuilder().setName("help").setDescription("Показва помощ").toJSON(),
-  new SlashCommandBuilder().setName("roleinfo").setDescription("Показва role stats (запазено)").toJSON(),
-  new SlashCommandBuilder().setName("professions").setDescription("Показва professions (запазено)").toJSON()
-].map(c => c.toJSON());
-
-const rest = new REST({ version: "10" }).setToken(TOKEN);
-
-(async () => {
-  try {
-    console.log("⚡ Регистриране на командите...");
-    await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
-    console.log("✅ Командите са регистрирани!");
-  } catch (err) {
-    console.error("❌ Грешка при регистриране на командите:", err);
-  }
-})();
+  new SlashCommandBuilder()
+    .setName("help")
+    .setDescription("Показва помощ"),
+  new SlashCommandBuilder()
+    .setName("roleinfo")
+    .setDescription("Показва role stats (запазено)"),
+  new SlashCommandBuilder()
+    .setName("professions")
+    .setDescription("Показва professions (запазено)")
+].map(cmd => cmd.toJSON());
 
 // ----------------------------- Active Raids storage -----------------------------
 /*
@@ -505,3 +499,4 @@ client.once("ready", async () => {
 client.login(TOKEN)
   .then(() => console.log("✅ Bot started"))
   .catch(err => console.error("❌ Login error:", err));
+
