@@ -1,4 +1,3 @@
-Използвате 94% от хранилището … Ако мястото в хранилището ви свърши, няма да можете да запазвате файлове в Диск и да използвате Gmail. Купете 100 ГБ хранилище за 3,99 лв. 0,99 лв. за 1 месец (персонализирана цена).
 const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require("discord.js");
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
