@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require("discord.js");
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
 });
@@ -7,23 +7,15 @@ const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
 const GUILD_ID = process.env.GUILD_ID;
 
-const wowClasses = [
-  "Druid", "Hunter", "Mage", "Paladin", "Priest", "Rogue", "Shaman", "Warlock", "Warrior"
-];
-
+// ------------------------- WOW DATA -------------------------
+const wowClasses = ["Druid", "Hunter", "Mage", "Paladin", "Priest", "Rogue", "Shaman", "Warlock", "Warrior"];
 const categories = ["DPS", "Tank", "Healer"];
-
 const validClasses = {
   DPS: ["Druid", "Hunter", "Mage", "Paladin", "Rogue", "Shaman", "Warlock", "Warrior"],
   Tank: ["Druid", "Paladin", "Warrior", "Shaman"],
   Healer: ["Druid", "Paladin", "Priest", "Shaman"]
 };
-
-const professions = [
-  "Alchemy", "Blacksmithing", "Herbalism", "Mining", "Engineering",
-  "Skinning", "Leatherworking", "Enchanting", "Tailoring", "Cooking",
-  "Fishing", "FirstAid", "Woodcutting"
-];
+const professions = ["Alchemy","Blacksmithing","Herbalism","Mining","Engineering","Skinning","Leatherworking","Enchanting","Tailoring","Cooking","Fishing","FirstAid","Woodcutting"];
 
 // Емоджи по име
 function getEmojiByName(guild, name) {
@@ -31,7 +23,7 @@ function getEmojiByName(guild, name) {
   return emoji ? emoji.toString() : "•";
 }
 
-// Команди
+// ------------------------- COMMANDS -------------------------
 const commands = [
   new SlashCommandBuilder()
     .setName("roleinfo")
@@ -66,11 +58,35 @@ const commands = [
   new SlashCommandBuilder()
     .setName("help")
     .setDescription("Показва информация за всички команди")
+    .toJSON(),
+
+  new SlashCommandBuilder()
+    .setName("create")
+    .setDescription("Създава нов рейд")
+    .addStringOption(option =>
+      option.setName("name")
+        .setDescription("Име на рейда")
+        .setRequired(true)
+    )
+    .addStringOption(option =>
+      option.setName("date")
+        .setDescription("Дата на рейда (напр. 26.10.2025)")
+        .setRequired(true)
+    )
+    .addStringOption(option =>
+      option.setName("time")
+        .setDescription("Час на рейда (напр. 20:00)")
+        .setRequired(true)
+    )
+    .addStringOption(option =>
+      option.setName("image")
+        .setDescription("Линк към картинка за ембед (по избор)")
+        .setRequired(false)
+    )
     .toJSON()
 ];
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
-
 (async () => {
   try {
     console.log("⚡ Регистриране на командите...");
@@ -84,8 +100,7 @@ const rest = new REST({ version: '10' }).setToken(TOKEN);
   }
 })();
 
-// ------------------------- HANDLERS -------------------------
-
+// ------------------------- HANDLERS / ROLEINFO & PROFESSIONS -------------------------
 async function handleRoleInfo(interaction) {
   const guild = await client.guilds.fetch(GUILD_ID);
   await guild.members.fetch();
@@ -94,95 +109,50 @@ async function handleRoleInfo(interaction) {
   const selectedRole = interaction.options.getString("role");
   const selectedClass = interaction.options.getString("class");
 
-  const embed = {
-    color: 0x0099ff,
-    title: "Информация за роли и класове",
-    description: "",
-    fields: [],
-    timestamp: new Date(),
-    footer: { text: "WoW Discord Bot" }
-  };
+  const embed = { color: 0x0099ff, title: "Информация за роли и класове", description: "", fields: [], timestamp: new Date(), footer: { text: "WoW Discord Bot" } };
 
   if (selectedClass) {
     const classRole = guild.roles.cache.find(r => r.name.toLowerCase() === selectedClass.toLowerCase());
-    if (!classRole) {
-      embed.description = "Не е намерен такъв клас.";
-      return interaction.reply({ embeds: [embed], flags: 1 << 6 });
-    }
+    if (!classRole) { embed.description = "Не е намерен такъв клас."; return interaction.reply({ embeds: [embed], flags: 1 << 6 }); }
     embed.color = classRole.color || 0x0099ff;
 
     for (const cat of categories) {
       if (!validClasses[cat].includes(selectedClass)) continue;
       if (selectedRole && selectedRole !== cat) continue;
-
       const catRole = guild.roles.cache.find(r => r.name.toLowerCase() === cat.toLowerCase());
       if (!catRole) continue;
-
       const altRole = guild.roles.cache.find(r => r.name.toLowerCase() === `${selectedClass.toLowerCase()}-alt`);
       const members = classRole.members.filter(m =>
-        m.roles.cache.has(catRole.id) &&
-        (!altRole || !m.roles.cache.has(altRole.id))
+        m.roles.cache.has(catRole.id) && (!altRole || !m.roles.cache.has(altRole.id))
       );
-
-      if (members.size > 0) {
-        const emoji = getEmojiByName(guild, selectedClass);
-        embed.fields.push({
-          name: `${emoji} ${selectedClass} (${cat})`,
-          value: `Брой: ${members.size}`,
-          inline: false
-        });
-      }
+      if (members.size > 0) { const emoji = getEmojiByName(guild, selectedClass); embed.fields.push({ name: `${emoji} ${selectedClass} (${cat})`, value: `Брой: ${members.size}`, inline: false }); }
     }
 
-    if (embed.fields.length === 0) {
-      embed.description = "Няма членове, които отговарят на зададените критерии.";
-    }
+    if (embed.fields.length === 0) embed.description = "Няма членове, които отговарят на зададените критерии.";
     return interaction.reply({ embeds: [embed], flags: 1 << 6 });
   }
 
   const categoriesToShow = selectedRole ? [selectedRole] : categories;
-
   for (const category of categoriesToShow) {
-    let totalCount = 0;
-    let categoryValue = "";
-
+    let totalCount = 0; let categoryValue = "";
     for (const cls of wowClasses.sort()) {
       if (!validClasses[category].includes(cls)) continue;
-
       const classRole = guild.roles.cache.find(r => r.name.toLowerCase() === cls.toLowerCase());
       const categoryRole = guild.roles.cache.find(r => r.name.toLowerCase() === category.toLowerCase());
       if (!classRole || !categoryRole) continue;
-
       const altRole = guild.roles.cache.find(r => r.name.toLowerCase() === `${cls.toLowerCase()}-alt`);
-
       const members = classRole.members.filter(m =>
-        m.roles.cache.has(categoryRole.id) &&
-        (!altRole || !m.roles.cache.has(altRole.id))
+        m.roles.cache.has(categoryRole.id) && (!altRole || !m.roles.cache.has(altRole.id))
       );
-
-      if (members.size > 0) {
-        const emoji = getEmojiByName(guild, cls.toLowerCase());
-        categoryValue += `${emoji} ${cls} - ${members.size}\n`;
-        totalCount += members.size;
-      }
+      if (members.size > 0) { const emoji = getEmojiByName(guild, cls.toLowerCase()); categoryValue += `${emoji} ${cls} - ${members.size}\n`; totalCount += members.size; }
     }
-
     if (totalCount > 0) {
       const categoryRole = guild.roles.cache.find(r => r.name.toLowerCase() === category.toLowerCase());
       embed.color = categoryRole?.color || embed.color;
-
-      embed.fields.push({
-        name: `${category} (Общо: ${totalCount})`,
-        value: categoryValue,
-        inline: false
-      });
+      embed.fields.push({ name: `${category} (Общо: ${totalCount})`, value: categoryValue, inline: false });
     }
   }
-
-  if (embed.fields.length === 0) {
-    embed.description = "Няма намерени членове по зададените критерии.";
-  }
-
+  if (embed.fields.length === 0) embed.description = "Няма намерени членове по зададените критерии.";
   return interaction.reply({ embeds: [embed], flags: 1 << 6 });
 }
 
@@ -192,115 +162,101 @@ async function handleProfessions(interaction) {
   await guild.emojis.fetch();
 
   const selectedProfession = interaction.options.getString("profession");
-
-  const embed = {
-    color: 0x0099ff,
-    title: "Информация за професии",
-    description: "",
-    fields: [],
-    timestamp: new Date(),
-    footer: { text: "WoW Discord Bot" }
-  };
+  const embed = { color: 0x0099ff, title: "Информация за професии", description: "", fields: [], timestamp: new Date(), footer: { text: "WoW Discord Bot" } };
 
   if (selectedProfession) {
     const profRole = guild.roles.cache.find(r => r.name.toLowerCase() === selectedProfession.toLowerCase());
-    if (!profRole) {
-      embed.description = "Не е намерена такава професия.";
-      return interaction.reply({ embeds: [embed], flags: 1 << 6 });
-    }
-
+    if (!profRole) { embed.description = "Не е намерена такава професия."; return interaction.reply({ embeds: [embed], flags: 1 << 6 }); }
     embed.color = profRole.color || embed.color;
-
     const members = profRole.members;
     const emoji = getEmojiByName(guild, selectedProfession.toLowerCase()) || "•";
-
-    embed.fields.push({
-      name: `${emoji} ${selectedProfession}`,
-      value: `Брой: ${members.size}`,
-      inline: false
-    });
-
+    embed.fields.push({ name: `${emoji} ${selectedProfession}`, value: `Брой: ${members.size}`, inline: false });
     return interaction.reply({ embeds: [embed], flags: 1 << 6 });
   }
 
   let professionsList = "";
-
   for (const prof of professions.sort()) {
     const profRole = guild.roles.cache.find(r => r.name.toLowerCase() === prof.toLowerCase());
     if (!profRole) continue;
-
     const members = profRole.members;
     if (members.size === 0) continue;
-
     const emoji = getEmojiByName(guild, prof.toLowerCase()) || "•";
     professionsList += `${emoji} ${prof} - ${members.size}\n`;
   }
 
-  if (professionsList === "") {
-    embed.description = "Няма намерени членове с избрани професии.";
-  } else {
-    embed.fields.push({
-      name: "Професии",
-      value: professionsList,
-      inline: false
-    });
-  }
+  if (professionsList === "") embed.description = "Няма намерени членове с избрани професии.";
+  else embed.fields.push({ name: "Професии", value: professionsList, inline: false });
 
   return interaction.reply({ embeds: [embed], flags: 1 << 6 });
 }
 
 async function handleHelp(interaction) {
   const embed = {
-    color: 0x00ff00,
-    title: "Помощ за командите на WoW Discord бота",
-    description: "Тук можеш да видиш как се използват командите на бота:",
-    fields: [
-      {
-        name: "/roleinfo",
-        value:
-          "Показва WoW роли и класове с брой членове.\n" +
-          "- Можеш да филтрираш по роля: DPS, Tank, Healer.\n" +
-          "- Можеш да филтрираш по клас (напр. Warrior, Mage).\n" +
-          "Пример: `/roleinfo role:DPS` или `/roleinfo class:Warrior`",
-        inline: false,
-      },
-      {
-        name: "/professions",
-        value:
-          "Показва професии и брой членове.\n" +
-          "- Можеш да филтрираш по професия (напр. Alchemy, Woodcutting).\n" +
-          "Пример: `/professions profession:Alchemy`",
-        inline: false,
-      },
-      {
-        name: "/help",
-        value: "Показва тази помощ и информация за командите.",
-        inline: false,
-      },
+    color: 0x00ff00, title: "Помощ за командите на WoW Discord бота", description: "Тук можеш да видиш как се използват командите на бота:", fields: [
+      { name: "/roleinfo", value: "Показва WoW роли и класове с брой членове.\n- Можеш да филтрираш по роля: DPS, Tank, Healer.\n- Можеш да филтрираш по клас (напр. Warrior, Mage).\nПример: `/roleinfo role:DPS` или `/roleinfo class:Warrior`", inline: false },
+      { name: "/professions", value: "Показва професии и брой членове.\n- Можеш да филтрираш по професия (напр. Alchemy, Woodcutting).\nПример: `/professions profession:Alchemy`", inline: false },
+      { name: "/help", value: "Показва тази помощ и информация за командите.", inline: false },
+      { name: "/create", value: "Създава нов рейд.\n- Първо въведи име, дата, час.\n- Можеш да добавиш картинка (по избор).\n- След това всеки може да избере клас, роля, талант и ще се виждат участниците в ембед.", inline: false }
     ],
     timestamp: new Date(),
-    footer: { text: "WoW Discord Bot" },
+    footer: { text: "WoW Discord Bot" }
   };
-
   await interaction.reply({ embeds: [embed], flags: 1 << 6 });
 }
 
-// ------------------------- INTERACTION LISTENER -------------------------
+// ------------------------- RAID SYSTEM -------------------------
+const raidLimits = { min: 10, max: 25 };
+const raidRoles = ["Healer","DPS","Tank"];
+let raid = {};
 
+function getRoleCategory(cls, talent) {
+  // Можеш да добавиш специфични правила, например Shaman Enhancement = Melee
+  if (cls.toLowerCase() === "shaman" && talent.toLowerCase() === "enhancement") return "DPS"; 
+  if (cls.toLowerCase() === "shaman" && talent.toLowerCase() === "elemental") return "DPS";
+  if (cls.toLowerCase() === "shaman" && talent.toLowerCase() === "restoration") return "Healer";
+  if (["Paladin","Warrior","Druid","Shaman"].includes(cls) && talent.toLowerCase() === "tank") return "Tank";
+  if (["Druid","Paladin","Priest","Shaman"].includes(cls) && talent.toLowerCase() === "healer") return "Healer";
+  return "DPS";
+}
+
+const raidClasses = wowClasses;
+
+// ------------------------- INTERACTION CREATE -------------------------
 client.on("interactionCreate", async interaction => {
-  if (!interaction.isCommand()) return;
+  if (interaction.isCommand()) {
+    if (interaction.commandName === "roleinfo") await handleRoleInfo(interaction);
+    else if (interaction.commandName === "professions") await handleProfessions(interaction);
+    else if (interaction.commandName === "help") await handleHelp(interaction);
+    else if (interaction.commandName === "create") {
+      const name = interaction.options.getString("name");
+      const date = interaction.options.getString("date");
+      const time = interaction.options.getString("time");
+      const image = interaction.options.getString("image");
 
-  if (interaction.commandName === "roleinfo") {
-    await handleRoleInfo(interaction);
-  } else if (interaction.commandName === "professions") {
-    await handleProfessions(interaction);
-  } else if (interaction.commandName === "help") {
-    await handleHelp(interaction);
+      raid = { info: { name, date, time, image } };
+      raidRoles.forEach(r => raid[r] = []);
+
+      const embed = new EmbedBuilder()
+        .setTitle(`📅 Рейд: ${name}`)
+        .setDescription(`Дата: **${date}**\nЧас: **${time}**\n@Admin @Moderator @Officer @Raid Leader @everyone`)
+        .setColor(0x00AAFF)
+        .setTimestamp();
+      if (image) embed.setImage(image);
+
+      const row = new ActionRowBuilder().addComponents(
+        new StringSelectMenuBuilder()
+          .setCustomId("raid_select_class")
+          .setPlaceholder("Избери клас")
+          .addOptions(raidClasses.map(cls => ({ label: cls, value: cls })))
+      );
+      await interaction.reply({ embeds: [embed], components: [row] });
+    }
   }
+
+  // TODO: Добави тук селект менютата за клас/роля/талант с автоматично заключване
 });
 
-// ------------------------- READY EVENT & STATUS -------------------------
-
+// ------------------------- READY & STATUS -------------------------
 client.once("clientReady", async () => {
   console.log(`✅ Логнат като ${client.user.tag}`);
 
@@ -314,48 +270,27 @@ client.once("clientReady", async () => {
   ];
 
   let index = 0;
-
   async function updateDynamicStatus() {
     await guild.members.fetch();
-
-    const roleCounts = { DPS: 0, Tank: 0, Healer: 0 };
-
-    for (const category of ["DPS", "Tank", "Healer"]) {
+    const roleCounts = { DPS:0,Tank:0,Healer:0 };
+    for (const category of categories) {
       const role = guild.roles.cache.find(r => r.name.toLowerCase() === category.toLowerCase());
-      if (!role) continue;
-
-      const members = role.members.filter(m =>
-        !m.roles.cache.some(r => r.name.toLowerCase().endsWith("-alt"))
-      );
+      if(!role) continue;
+      const members = role.members.filter(m => !m.roles.cache.some(r=>r.name.toLowerCase().endsWith("-alt")));
       roleCounts[category] = members.size;
     }
-
     return `DPS - ${roleCounts.DPS} | Tank - ${roleCounts.Tank} | Healer - ${roleCounts.Healer}`;
   }
-
   async function setNextStatus() {
-    let statusText;
-
-    if (index % 4 === 3) {
-      statusText = await updateDynamicStatus();
-    } else {
-      statusText = staticStatuses[index % staticStatuses.length];
-    }
-
-    client.user.setPresence({
-      activities: [{ name: statusText, type: 0 }],
-      status: "online"
-    });
-
+    let statusText = index%4===3 ? await updateDynamicStatus() : staticStatuses[index % staticStatuses.length];
+    client.user.setPresence({ activities:[{name:statusText,type:0}], status:"online" });
     index++;
   }
-
   await setNextStatus();
   setInterval(setNextStatus, 300000);
 });
 
 // ------------------------- LOGIN -------------------------
-
 client.login(TOKEN)
-  .then(() => console.log("✅ Опит за свързване с Discord..."))
-  .catch(err => console.error("❌ Грешка при логване в Discord:", err));
+  .then(()=>console.log("✅ Опит за свързване с Discord..."))
+  .catch(err=>console.error("❌ Грешка при логване в Discord:",err));
