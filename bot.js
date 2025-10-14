@@ -1,179 +1,109 @@
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle, ComponentType, EmbedBuilder } = require("discord.js");
+// bot.js
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 
-const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
-});
-
-const TOKEN = process.env.TOKEN;
-const CLIENT_ID = process.env.CLIENT_ID;
-const GUILD_ID = process.env.GUILD_ID;
-
-// ---------------- WoW данни ----------------
+// --- Конфигурация класове и роли ---
 const wowClasses = ["Druid","Hunter","Mage","Paladin","Priest","Rogue","Shaman","Warlock","Warrior"];
-const classSpecs = {
-  Druid: ["Feral","Balance","Restoration"],
-  Hunter: ["Beast Mastery","Marksmanship","Survival"],
-  Mage: ["Arcane","Fire","Frost"],
-  Paladin: ["Holy","Protection","Retribution"],
-  Priest: ["Holy","Discipline","Shadow"],
-  Rogue: ["Assassination","Combat","Subtlety"],
-  Shaman: ["Elemental","Enhancement","Restoration","Tank"], // Custom Tank spec
-  Warlock: ["Affliction","Demonology","Destruction"],
-  Warrior: ["Arms","Fury","Protection"]
+const roleEmojis = { "Tank":"🛡️", "Healer":"💚", "Melee DPS":"⚔️", "Ranged DPS":"🏹" };
+const classEmojis = {
+  "Druid":":druid:", "Hunter":":hunter:", "Mage":":mage:", "Paladin":":paladin:", 
+  "Priest":":priest:", "Rogue":":rogue:", "Shaman":":shaman:", "Warlock":":warlock:", "Warrior":":warrior:"
 };
 
-// Map специализация -> ролята
-const specRoles = {
-  Feral: "Melee DPS",
-  Balance: "Ranged DPS",
-  Restoration: "Healer",
-  BeastMastery: "Ranged DPS",
-  Marksmanship: "Ranged DPS",
-  Survival: "Ranged DPS",
-  Arcane: "Ranged DPS",
-  Fire: "Ranged DPS",
-  Frost: "Ranged DPS",
-  Holy: "Healer",
-  Protection: "Tank",
-  Retribution: "Melee DPS",
-  Discipline: "Healer",
-  Shadow: "Ranged DPS",
-  Assassination: "Melee DPS",
-  Combat: "Melee DPS",
-  Subtlety: "Melee DPS",
-  Elemental: "Ranged DPS",
-  Enhancement: "Melee DPS",
-  Tank: "Tank",
-  Affliction: "Ranged DPS",
-  Demonology: "Ranged DPS",
-  Destruction: "Ranged DPS",
-  Arms: "Melee DPS",
-  Fury: "Melee DPS",
-  WarriorProtection: "Tank"
+// --- Демо структура за райд ---
+let raid = {
+  info: { name:"", date:"", time:"", maxParticipants:0, maxTank:0, maxHealer:0, image:"" },
+  participants: [] // {id,class,spec,role}
 };
 
-const raidData = {}; // { messageId: { info, participants: [] } }
+// --- Функция за автоматично определяне на ролята по специализация ---
+function getRoleBySpec(cls,spec) {
+  const tankSpecs = { "Warrior":["Protection"], "Paladin":["Protection"], "Shaman":["Enhancement"] };
+  const healerSpecs = { "Druid":["Restoration"], "Paladin":["Holy"], "Priest":["Holy"], "Shaman":["Restoration"] };
+  const rangedSpecs = { "Hunter":["Beast Mastery","Marksmanship","Survival"], "Mage":["All"], "Warlock":["All"], "Priest":["Shadow"] };
+  const meleeSpecs = { "Rogue":["All"], "Warrior":["Arms","Fury"], "Paladin":["Retribution"], "Shaman":["Enhancement"] };
 
-// ---------------- Slash Commands ----------------
-const commands = [
-  new SlashCommandBuilder()
-    .setName("create")
-    .setDescription("Създава нов рейд")
-    .addStringOption(opt => opt.setName("name").setDescription("Raid Name").setRequired(true))
-    .addStringOption(opt => opt.setName("date").setDescription("YYYY-MM-DD").setRequired(true))
-    .addStringOption(opt => opt.setName("time").setDescription("HH:MM").setRequired(true))
-    .addIntegerOption(opt => opt.setName("maxplayers").setDescription("Максимален брой участници").setRequired(true))
-    .addIntegerOption(opt => opt.setName("maxtank").setDescription("Максимален брой танкове").setRequired(true))
-    .addIntegerOption(opt => opt.setName("maxhealer").setDescription("Максимален брой хийлъри").setRequired(true))
-    .addStringOption(opt => opt.setName("image").setDescription("Линк за картинка").setRequired(false))
-    .toJSON()
-].map(c=>c);
-
-// Регистрация
-const rest = new REST({ version: "10" }).setToken(TOKEN);
-(async () => {
-  try {
-    await rest.put(Routes.applicationGuildCommands(CLIENT_ID, GUILD_ID), { body: commands });
-    console.log("✅ Командите са регистрирани!");
-  } catch (err) {
-    console.error(err);
-  }
-})();
-
-// ---------------- Helper Functions ----------------
-function getEmojiByName(guild, name) {
-  const e = guild.emojis.cache.find(em => em.name.toLowerCase() === name.toLowerCase());
-  return e ? e.toString() : "•";
+  if(tankSpecs[cls]?.includes(spec)) return "Tank";
+  if(healerSpecs[cls]?.includes(spec)) return "Healer";
+  if(meleeSpecs[cls]?.includes(spec)) return "Melee DPS";
+  return "Ranged DPS";
 }
 
-function buildRaidEmbed(raid) {
+// --- Embed Builder ---
+function buildRaidEmbed() {
   const embed = new EmbedBuilder()
     .setTitle(`${raid.info.name} - ${raid.info.date} ${raid.info.time}`)
-    .setDescription(raid.info.image || "")
     .setColor(0x00ff00);
+  if(raid.info.image && raid.info.image.trim().length>0) embed.setDescription(raid.info.image);
 
   // Статистика роли
   const rolesCount = { "Tank":0,"Healer":0,"Melee DPS":0,"Ranged DPS":0 };
   raid.participants.forEach(p => rolesCount[p.role]++);
-  embed.addFields([
-    { name: "Roles", value:
-      `🛡️Tank - ${rolesCount["Tank"]}\n`+
-      `💚Healer - ${rolesCount["Healer"]}\n`+
-      `⚔️Melee DPS - ${rolesCount["Melee DPS"]}\n`+
-      `🏹Ranged DPS - ${rolesCount["Ranged DPS"]}`, inline: true }
-  ]);
+  embed.addFields([{ 
+    name:"Roles", value:
+      `${roleEmojis["Tank"]} Tank - ${rolesCount["Tank"]}\n`+
+      `${roleEmojis["Healer"]} Healer - ${rolesCount["Healer"]}\n`+
+      `${roleEmojis["Melee DPS"]} Melee DPS - ${rolesCount["Melee DPS"]}\n`+
+      `${roleEmojis["Ranged DPS"]} Ranged DPS - ${rolesCount["Ranged DPS"]}`, inline:true
+  }]);
 
   // Класове с участници, 3 колони
-  const classFields = [];
-  wowClasses.forEach((cls,i)=>{
-    const participants = raid.participants.filter(p=>p.class===cls);
-    const names = participants.map(p=>`${getEmojiByName(raid.guild,cls)} <@${p.id}>`).join("\n");
-    if(names) classFields.push({ name: cls, value: names || "Няма", inline:true });
+  wowClasses.forEach(cls=>{
+    const members = raid.participants.filter(p=>p.class===cls);
+    if(members.length>0) {
+      const names = members.map(p=>`${classEmojis[cls]} <@${p.id}>`).join("\n");
+      embed.addFields([{ name: cls, value:names, inline:true }]);
+    }
   });
-  embed.addFields(classFields);
 
   return embed;
 }
 
-// ---------------- Interaction ----------------
-client.on("interactionCreate", async interaction=>{
-  if(interaction.isCommand()){
+// --- Създаване на селект меню ---
+function createSelectMenu(userId) {
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId(`select_raid_${userId}`)
+      .setPlaceholder("Избери клас")
+      .addOptions(wowClasses.map(cls=>({label:cls,value:cls})))
+  );
+}
+
+// --- Events ---
+client.on('clientReady', () => {
+  console.log(`Logged in as ${client.user.tag}`);
+});
+
+client.on('interactionCreate', async interaction=>{
+  if(interaction.isChatInputCommand()){
     if(interaction.commandName==="create"){
-      const raidInfo = {
-        name: interaction.options.getString("name"),
-        date: interaction.options.getString("date"),
-        time: interaction.options.getString("time"),
-        maxplayers: interaction.options.getInteger("maxplayers"),
-        maxtank: interaction.options.getInteger("maxtank"),
-        maxhealer: interaction.options.getInteger("maxhealer"),
-        image: interaction.options.getString("image"),
-        guild: interaction.guild
-      };
-
-      const participants = [];
-
-      // Създаване на ембед
-      const embed = buildRaidEmbed({ info: raidInfo, participants, guild: interaction.guild });
-
-      // Създаване на селект меню за класове
-      const classSelect = new StringSelectMenuBuilder()
-        .setCustomId("raid_class")
-        .setPlaceholder("Избери клас")
-        .addOptions(wowClasses.map(c=>({label:c,value:c})));
-
-      const row = new ActionRowBuilder().addComponents(classSelect);
-
-      const msg = await interaction.reply({ embeds:[embed], components:[row], fetchReply:true });
-      raidData[msg.id] = { info: raidInfo, participants, message: msg };
+      // Записваме info от /create command
+      raid.info.name = interaction.options.getString("raidname");
+      raid.info.date = interaction.options.getString("date");
+      raid.info.time = interaction.options.getString("time");
+      raid.info.maxParticipants = interaction.options.getInteger("maxparticipants");
+      raid.info.maxTank = interaction.options.getInteger("maxtank");
+      raid.info.maxHealer = interaction.options.getInteger("maxhealer");
+      raid.info.image = interaction.options.getString("image");
+      await interaction.reply({ embeds:[buildRaidEmbed()], components:[createSelectMenu(interaction.user.id)] });
     }
   }
+
   if(interaction.isStringSelectMenu()){
-    if(interaction.customId==="raid_class"){
-      const raid = raidData[interaction.message.id];
-      const cls = interaction.values[0];
-      const specs = classSpecs[cls];
+    const cls = interaction.values[0];
+    // TODO: след избор на клас -> специализация -> роля
+    const spec = "Default"; // placeholder
+    const role = getRoleBySpec(cls,spec);
 
-      // Ако само 1 спецификация -> автоматично
-      let chosenSpec = specs.length===1 ? specs[0] : specs[0]; // по default първата, може да добавим второ меню
-
-      const role = specRoles[chosenSpec];
-
-      // Проверка дублиране
-      if(raid.participants.find(p=>p.id===interaction.user.id)) {
-        return interaction.reply({ content:"Вече си записан!", ephemeral:true });
-      }
-
-      raid.participants.push({ id: interaction.user.id, class:cls, spec:chosenSpec, role });
-
-      const embed = buildRaidEmbed(raid);
-      await interaction.update({ embeds:[embed] });
+    // Проверка за дублиране
+    if(raid.participants.find(p=>p.id===interaction.user.id)){
+      await interaction.reply({ content:"Вече сте записан!", ephemeral:true });
+      return;
     }
+
+    raid.participants.push({ id:interaction.user.id, class:cls, spec, role });
+    await interaction.update({ embeds:[buildRaidEmbed()], components:[] });
   }
 });
 
-// ---------------- Ready ----------------
-client.once("clientReady", async ()=>{
-  console.log(`✅ Logged in as ${client.user.tag}`);
-});
-
-client.login(TOKEN);
+client.login("YOUR_TOKEN_HERE");
