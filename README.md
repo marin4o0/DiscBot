@@ -29,3 +29,8 @@ This Discord bot tracks **World of Warcraft classes, specializations, and profes
 1. Clone the repository:
    ```bash
    git clone https://github.com/yourusername/yourrepo.git
+## Notes
+- The bot only reads roles; it does not assign them.
+- All emojis must exist on your Discord server.
+- Statistics are updated in real-time based on current roles.
+- For issues or feature requests, open an issue in this repository.
