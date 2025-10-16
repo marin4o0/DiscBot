@@ -16,10 +16,10 @@ This Discord bot tracks **World of Warcraft classes, specializations, and profes
 
 ## Screenshots
 
-### Bot check classes and specializations
+### Bot Track classes and specializations
 ![Bot Screenshot 1](images/discbot.jpg)
 
-### Bot check professions
+### Bot Track professions
 ![Bot Screenshot 2](images/discbot2.jpg)
 
 ---
