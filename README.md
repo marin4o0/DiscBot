@@ -5,10 +5,10 @@ This Discord bot tracks **World of Warcraft classes, specializations, and profes
 ---
 
 ## Features
-
-- Tracks **classes** (`:warrior:`, `:priest:`, etc.) based on user roles.
-- Tracks **specializations** (`:tank:`, `:dps:`, `:healer:`).
-- Tracks **professions** (`:mining:`, `:cooking:`, etc.).
+- Uses **Discord emojis** for icons; make sure to upload them to your server with the corresponding names, e.g., `:warrior:`, `:priest:`, `:tank:`, `:dps:`, `:healer:`, `:mining:`, `:cooking:`, etc.
+- Tracks original 9 **classes** (`Warrior:`, `Priest:`, etc.) based on user roles.
+- Tracks **specializations** (`Tank:`, `Dps:`, `Healer:`).
+- Tracks **professions** (`Mining:`, `Cooking:`, etc.).
 - Generates statistics for the number of users per class, specialization, or profession.
 - Supports **custom Discord emojis** for nicer visualization.
 
