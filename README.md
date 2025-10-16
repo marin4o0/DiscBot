@@ -17,10 +17,10 @@ This bot allows your Discord server to manage **World of Warcraft classes, speci
 ## Screenshots
 
 ### Bot assigning classes
-![Bot Screenshot 1](images/dicbot.jpg)
+![Bot Screenshot 1](images/discbot.jpg)
 
 ### Bot assigning professions and specializations
-![Bot Screenshot 2](images/dicbot2.jpg)
+![Bot Screenshot 2](images/discbot2.jpg)
 
 ---
 
