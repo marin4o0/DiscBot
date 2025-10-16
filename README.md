@@ -1,25 +1,25 @@
-# Discord WoW Classes & Professions Bot
+# Discord WoW Classes & Professions Tracker Bot
 
-This bot allows your Discord server to manage **World of Warcraft classes, specializations, and professions** easily. Users can assign themselves classes, specializations, and professions directly through Discord commands.
+This Discord bot tracks **World of Warcraft classes, specializations, and professions** of users on your server. It does not assign roles; instead, it reads users’ existing roles and provides statistics and summaries.
 
 ---
 
 ## Features
 
-- Self-assignable **classes** (`:warrior:`, `:priest:`, etc.).
-- Self-assignable **specializations** (`:tank:`, `:dps:`, `:healer:`).
-- Self-assignable **professions** (`:mining:`, `:cooking:`, etc.).
-- Real-time updates for classes, specializations, and professions.
-- Supports **custom Discord emojis** for better visuals.
+- Tracks **classes** (`:warrior:`, `:priest:`, etc.) based on user roles.
+- Tracks **specializations** (`:tank:`, `:dps:`, `:healer:`).
+- Tracks **professions** (`:mining:`, `:cooking:`, etc.).
+- Generates statistics for the number of users per class, specialization, or profession.
+- Supports **custom Discord emojis** for nicer visualization.
 
 ---
 
 ## Screenshots
 
-### Bot assigning classes and specializations
+### Bot check classes and specializations
 ![Bot Screenshot 1](images/discbot.jpg)
 
-### Bot assigning professions
+### Bot check professions
 ![Bot Screenshot 2](images/discbot2.jpg)
 
 ---
